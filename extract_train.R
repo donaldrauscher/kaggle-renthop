@@ -6,7 +6,7 @@ library(ggplot2)
 library(maptools)
 
 # pull in data
-data <- fromJSON("train.json")
+data <- fromJSON("./data/train.json")
 data2 <- data.frame(
   "bathrooms"=unlist(data$bathrooms),
   "bedrooms"=unlist(data$bedrooms),
@@ -154,5 +154,6 @@ data_model_train <- data7 %>% select(-description, -created, -listing_id, -build
 
 # save
 data_initial_train <- data2
-save(file="extract_train.Rdata", list = c("data_initial_train", "data_model_train", "top_features", "top_neighborhoods", "top_buildings", "top_managers"))
+data_model_train <- head(data_model_train, 1000)
+save(file="./data/extract_train.Rdata", list = c("data_initial_train", "data_model_train", "top_features", "top_neighborhoods", "top_buildings", "top_managers"))
 

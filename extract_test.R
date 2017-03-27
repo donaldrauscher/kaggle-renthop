@@ -6,7 +6,7 @@ library(ggplot2)
 library(maptools)
 
 # load the train data
-load("extract_train.Rdata")
+load("./data/extract_train.Rdata")
 
 # pull in data
 data <- fromJSON("test.json")
@@ -100,5 +100,5 @@ table(sort(setdiff(names(data_model_train), "interest_level")) == sort(names(dat
 
 # save
 data_initial_test <- data2
-save(file="extract_test.Rdata", list = c("data_initial_test", "data_model_test"))
+save(file="./data/extract_test.Rdata", list = c("data_initial_test", "data_model_test"))
 

@@ -1,4 +1,5 @@
 library(xgboost)
+library(Matrix)
 library(doParallel)
 library(dplyr)
 
@@ -6,19 +7,16 @@ set.seed(1)
 registerDoParallel(8)
 
 # load data
-load("extract_train.Rdata")
+load("./data/extract_train.Rdata")
 source("extra.R")
 
 # set up x and y
 ydata <- as.numeric(data_model_train$interest_level)-1
-xdata <- as.matrix(data_model_train[,setdiff(names(data_model_train), c("interest_level"))])
+xdata <- Matrix(as.matrix(data_model_train[,setdiff(names(data_model_train), c("interest_level"))]), sparse = TRUE)
 
 # set up tune grid
-tune_grid <- expand.grid(
-  eta = seq(0.1, 0.5, 0.1), 
-  min_child_weight = 1:5, 
-  mlogloss = NA
-)
+tune_grid <- expand.grid(eta = seq(0.1, 0.5, 0.1), min_child_weight = 1:5)
+tune_grid$mlogloss <- NA
 
 # set up cross-validation
 cv <- sample(1:3, length(ydata), replace=TRUE)
@@ -47,3 +45,8 @@ for (i in 1:nrow(tune_grid)){
   }
   tune_grid$mlogloss[i] <- mean(unlist(mlogloss))
 }
+
+# save
+xgb_params <- tune_grid %>% arrange(mlogloss) %>% head(., 1)
+save(file="./data/xgb_tune.Rdata", list = c("xgb_params"))
+
