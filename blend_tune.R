@@ -47,8 +47,8 @@ blend_mlogloss <- sapply(blend_weights, function(x){
   return(multiloss(pred_blend, ydata_test2))
 })
 optimal_blend_weight <- blend_weights[which.min(blend_mlogloss)]
-optimal_blend_mlogloss <- min(blend_mlogloss)
+blend_params <- list(xgb_weight = optimal_blend_weight, mlogloss = min(blend_mlogloss))
 
 # save
-save(file="./data/blend_tune.Rdata", list = c("optimal_blend_weight", "optimal_blend_mlogloss"))
+save(file="./data/blend_tune.Rdata", list = c("blend_params"))
 

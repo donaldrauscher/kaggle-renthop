@@ -31,7 +31,7 @@ glm <- glmnet(x = xdata_train, y = ydata_train, family = "multinomial", alpha = 
 pred_glm <- matrix(predict(glm, xdata_test,  s = min(glm_params$lambda), type = "response"), ncol = 3, byrow = FALSE)
 
 # blend the predictions
-pred_blend <- pred_xgb * optimal_blend_weight + pred_glm * (1 - optimal_blend_weight)
+pred_blend <- pred_xgb * blend_params$xgb_weight + pred_glm * (1 - blend_params$xgb_weight)
 
 # save
 pred_blend2 <- as.data.frame(pred_blend)
