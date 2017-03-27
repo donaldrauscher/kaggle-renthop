@@ -154,6 +154,5 @@ data_model_train <- data7 %>% select(-description, -created, -listing_id, -build
 
 # save
 data_initial_train <- data2
-data_model_train <- head(data_model_train, 1000)
 save(file="./data/extract_train.Rdata", list = c("data_initial_train", "data_model_train", "top_features", "top_neighborhoods", "top_buildings", "top_managers"))
 

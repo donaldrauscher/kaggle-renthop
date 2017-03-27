@@ -9,7 +9,7 @@ library(maptools)
 load("./data/extract_train.Rdata")
 
 # pull in data
-data <- fromJSON("test.json")
+data <- fromJSON("./data/test.json")
 data2 <- data.frame(
   "bathrooms"=unlist(data$bathrooms),
   "bedrooms"=unlist(data$bedrooms),

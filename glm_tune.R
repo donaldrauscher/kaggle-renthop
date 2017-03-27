@@ -54,11 +54,11 @@ for (a in seq(0, 1, 0.5)){
   params <- rbind(params, mutate(params_temp, alpha = a))
 }
 
-# determine optimal alpha
+# determine optimal alpha / lambda
 params2 <- params %>% group_by(alpha) %>% summarise_each(funs(mean)) %>% arrange(mlogloss) %>% head(.,1)
-mlogloss <- param2$mlogloss
 alpha <- params2$alpha
 lambda <- lambda_path[lambda_path <= params2$lambda]
+mlogloss <- params2$mlogloss
 glm_params <- list(alpha = alpha, lambda = lambda, mlogloss = mlogloss)
 
 # save
