@@ -57,7 +57,7 @@ for (a in seq(0, 1, 0.5)){
 # determine optimal alpha / lambda
 params2 <- params %>% group_by(alpha) %>% summarise_each(funs(mean)) %>% arrange(mlogloss) %>% head(.,1)
 alpha <- params2$alpha
-lambda <- lambda_path[lambda_path <= params2$lambda]
+lambda <- lambda_path[lambda_path >= params2$lambda]
 mlogloss <- params2$mlogloss
 glm_params <- list(alpha = alpha, lambda = lambda, mlogloss = mlogloss)
 
