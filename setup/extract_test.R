@@ -1,9 +1,11 @@
 library(jsonlite)
 library(dplyr)
 library(tidyr)
+library(tidytext)
 library(lubridate)
 library(ggplot2)
 library(maptools)
+library(tm)
 
 # load the train data
 load("./data/extract_train.Rdata")
@@ -28,11 +30,12 @@ data2 <- data.frame(
 )
 
 # create a few base variables
-data2 <- data2 %>% mutate(bedrooms_minus_bathrooms = bedrooms - bathrooms, price_per_bedroom = price / ifelse(bedrooms == 0, 1, bedrooms))
+data3 <- data2
+data3 <- data3 %>% mutate(bedrooms_minus_bathrooms = bedrooms - bathrooms, price_per_bedroom = price / ifelse(bedrooms == 0, 1, bedrooms))
 
 # create binary flags for each feature
 feature_map <- data.frame(
-  "listing_id"=rep(data2$listing_id, times=unlist(lapply(data$features, function(x) length(x)))),
+  "listing_id"=rep(data3$listing_id, times=unlist(lapply(data$features, function(x) length(x)))),
   "feature"=unlist(data$features),
   stringsAsFactors=FALSE
 )
@@ -43,7 +46,7 @@ feature_map <- feature_map %>%
   select(listing_id, feature_id) %>% distinct() %>%
   group_by(listing_id) %>% mutate(tag=1) %>% spread(feature_id, tag, fill=0)
 
-data3 <- data2 %>% left_join(feature_map, by="listing_id")
+data3 <- data3 %>% left_join(feature_map, by="listing_id")
 data3[,names(feature_map)[-1]][is.na(data3[,names(feature_map)[-1]])] <- 0 
 
 # align listings with neighborhoods from zillow
@@ -67,38 +70,61 @@ for (g in unique(neighborhood_points$group)){
   data3$neighborhood_id[point.in.polygon(data3$longitude, data3$latitude, temp$long, temp$lat)>0] <- floor(g)
 }
 
-data4 <- data3 %>% left_join(neighborhood_names, by=c("neighborhood_id"))
+data3 <- data3 %>% left_join(neighborhood_names, by=c("neighborhood_id"))
 
-# create intercepts for top neighborhoods
-data5 <- data4
+# create neighborhood weights
+data3 <- data3 %>% left_join(neighborhood_weights, by = c("neighborhood_id"))
 for (n in top_neighborhoods$neighborhood_id){
   n2 <- paste0("n", sprintf("%03d", as.integer(n)))
-  data5[[n2]] <- ifelse(is.na(data5$neighborhood_id), 0, ifelse(data5$neighborhood_id == n, 1, 0))
+  data3[[n2]] <- ifelse(is.na(data3$neighborhood_id), 0, ifelse(data3$neighborhood_id == n, 1, 0))
 }
+data3$n_neighborhood_weight[is.na(data3$n_neighborhood_weight)] <- 0
 
-# create intercepts for top buildings
-data6 <- data5
+# create building weights
+data3 <- data3 %>% left_join(building_weights, by = c("building_id"))
 for (i in 1:nrow(top_buildings)){
   b1 <- top_buildings$building_id[i]
   b2 <- top_buildings$building_id2[i]
-  data6[[b2]] <- ifelse(data6$building_id == b1, 1, 0)
+  data3[[b2]] <- ifelse(data3$building_id == b1, 1, 0)
 }
+data3$n_building_weight[is.na(data3$n_building_weight)] <- 0
 
-# create intercepts for top managers
-data7 <- data6
+# create manager weights
+data3 <- data3 %>% left_join(manager_weights, by = c("manager_id"))
 for (i in 1:nrow(top_managers)){
   m1 <- top_managers$manager_id[i]
   m2 <- top_managers$manager_id2[i]
-  data7[[m2]] <- ifelse(data7$manager_id == m1, 1, 0)
+  data3[[m2]] <- ifelse(data3$manager_id == m1, 1, 0)
 }
+data3$n_manager_weight[is.na(data3$n_manager_weight)] <- 0
 
-# final model universe
-data_model_test <- data7 %>% select(-description, -created, -listing_id, -building_id, -manager_id, -neighborhood_id, -neighborhood, -latitude, -longitude, -display_address, -street_address)
+# flags for top keywords
+data3 <- data3
+data3$description <- toupper(data3$description)
+data3$description <- sapply(data3$description, function(x) gsub("<[^>]*>", " ", x))
+data3$description <- sapply(data3$description, function(x) gsub("[ ]{2,}", " ", x))
+data3$description <- sapply(data3$description, function(x) gsub("[[:punct:]]", " ", x))
+
+keywords <- list()
+for (i in 1:nrow(top_ngrams)){
+  id <- top_ngrams$ngram_id[i]
+  keyword <- top_ngrams$ngram[i]
+  keywords[[id]] <- as.integer(grepl(keyword, data3$description))
+}
+keywords <- as.matrix(do.call(cbind, keywords))
+
+ngrams <- as.data.frame(keywords %*% as.matrix(ngram_principal_factors$loadings))
+names(ngrams) <- paste0("k", sprintf("%03d", 1:ncol(ngram_principal_factors$loadings)))
+
+data3 <- cbind(data3, ngrams)
+
+# set up final dataframes
+data_test_raw <- data2
+data_test_processed <- data3
 
 # qc that test and train have same variables
-table(sort(setdiff(names(data_model_train), "interest_level")) == sort(names(data_model_test)))
+table(sort(setdiff(names(data_train_processed), "interest_level")) == sort(names(data_test_processed)))
 
 # save
-data_initial_test <- data2
-save(file="./data/extract_test.Rdata", list = c("data_initial_test", "data_model_test"))
+save(data_test_raw, data_test_processed, file = "./data/extract_test.Rdata")
 
