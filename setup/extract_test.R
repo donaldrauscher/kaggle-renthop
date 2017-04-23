@@ -73,30 +73,24 @@ for (g in unique(neighborhood_points$group)){
 data3 <- data3 %>% left_join(neighborhood_names, by=c("neighborhood_id"))
 
 # create neighborhood weights
-data3 <- data3 %>% left_join(neighborhood_weights, by = c("neighborhood_id"))
 for (n in top_neighborhoods$neighborhood_id){
   n2 <- paste0("n", sprintf("%03d", as.integer(n)))
   data3[[n2]] <- ifelse(is.na(data3$neighborhood_id), 0, ifelse(data3$neighborhood_id == n, 1, 0))
 }
-data3$n_neighborhood_weight[is.na(data3$n_neighborhood_weight)] <- 0
 
 # create building weights
-data3 <- data3 %>% left_join(building_weights, by = c("building_id"))
 for (i in 1:nrow(top_buildings)){
   b1 <- top_buildings$building_id[i]
   b2 <- top_buildings$building_id2[i]
   data3[[b2]] <- ifelse(data3$building_id == b1, 1, 0)
 }
-data3$n_building_weight[is.na(data3$n_building_weight)] <- 0
 
 # create manager weights
-data3 <- data3 %>% left_join(manager_weights, by = c("manager_id"))
 for (i in 1:nrow(top_managers)){
   m1 <- top_managers$manager_id[i]
   m2 <- top_managers$manager_id2[i]
   data3[[m2]] <- ifelse(data3$manager_id == m1, 1, 0)
 }
-data3$n_manager_weight[is.na(data3$n_manager_weight)] <- 0
 
 # flags for top keywords
 data3 <- data3
@@ -123,7 +117,8 @@ data_test_raw <- data2
 data_test_processed <- data3
 
 # qc that test and train have same variables
-table(sort(setdiff(names(data_train_processed), "interest_level")) == sort(names(data_test_processed)))
+setdiff(names(data_train_processed), names(data_test_processed))
+setdiff(names(data_test_processed), names(data_train_processed))
 
 # save
 save(data_test_raw, data_test_processed, file = "./data/extract_test.Rdata")

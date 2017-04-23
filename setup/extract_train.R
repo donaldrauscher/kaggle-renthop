@@ -122,30 +122,6 @@ for (g in unique(neighborhood_points$group)){
 
 data3 <- data3 %>% left_join(neighborhood_names, by=c("neighborhood_id"))
 
-# create neighborhood weights (leave one out cv)
-neighborhood_weights <- data3 %>%
-  filter(!is.na(neighborhood_id)) %>% group_by(neighborhood_id) %>% 
-  summarise(low = sum(interest_level == "low"), medium = sum(interest_level == "medium"), high = sum(interest_level == "high")) %>%
-  mutate(low_total = sum(low), medium_total = sum(medium), high_total = sum(high)) %>%
-  mutate(total = low + medium + high, total_total = low_total + medium_total + high_total) %>%
-  mutate(low_neighborhood_weight = low / total, medium_neighborhood_weight = medium / total, high_neighborhood_weight = high / total) %>%
-  rename(n_neighborhood_weight = total) %>%
-  select(neighborhood_id, low_neighborhood_weight, medium_neighborhood_weight, high_neighborhood_weight, n_neighborhood_weight)
-
-data3 <- data3 %>%
-  group_by(neighborhood_id) %>% 
-  mutate(low = as.integer(interest_level == "low"), medium = as.integer(interest_level == "medium"), high = as.integer(interest_level == "high")) %>%
-  mutate(low_total = sum(low), medium_total = sum(medium), high_total = sum(high)) %>%
-  ungroup() %>%
-  mutate(low_holdout = low_total - low, medium_holdout = medium_total - medium, high_holdout = high_total - high, total_holdout = low_holdout + medium_holdout + high_holdout) %>%
-  mutate(low_neighborhood_weight = low_holdout / total_holdout, medium_neighborhood_weight = medium_holdout / total_holdout, high_neighborhood_weight = high_holdout / total_holdout) %>%
-  rename(n_neighborhood_weight = total_holdout) %>%
-  select(-low, -medium, -high, -low_total, -medium_total, -high_total, -low_holdout, -medium_holdout, -high_holdout)
-
-data3$low_neighborhood_weight[is.na(data3$neighborhood_id) | data3$n_neighborhood_weight == 0] <- NA
-data3$medium_neighborhood_weight[is.na(data3$neighborhood_id) | data3$n_neighborhood_weight == 0] <- NA
-data3$high_neighborhood_weight[is.na(data3$neighborhood_id) | data3$n_neighborhood_weight == 0] <- NA
-
 # create intercepts for top neighborhoods
 top_neighborhoods <- data3 %>% 
   filter(!is.na(neighborhood_id)) %>%
@@ -157,30 +133,6 @@ for (n in top_neighborhoods$neighborhood_id){
   n2 <- paste0("n", sprintf("%03d", as.integer(n)))
   data3[[n2]] <- ifelse(is.na(data3$neighborhood_id), 0, ifelse(data3$neighborhood_id == n, 1, 0))
 }
-
-# create building weights (leave one out cv)
-building_weights <- data3 %>%
-  filter(building_id != 0) %>% group_by(building_id) %>% 
-  summarise(low = sum(interest_level == "low"), medium = sum(interest_level == "medium"), high = sum(interest_level == "high")) %>%
-  mutate(low_total = sum(low), medium_total = sum(medium), high_total = sum(high)) %>%
-  mutate(total = low + medium + high, total_total = low_total + medium_total + high_total) %>%
-  mutate(low_building_weight = low / total, medium_building_weight = medium / total, high_building_weight = high / total) %>%
-  rename(n_building_weight = total) %>%
-  select(building_id, low_building_weight, medium_building_weight, high_building_weight, n_building_weight)
-
-data3 <- data3 %>%
-  group_by(building_id) %>% 
-  mutate(low = as.integer(interest_level == "low"), medium = as.integer(interest_level == "medium"), high = as.integer(interest_level == "high")) %>%
-  mutate(low_total = sum(low), medium_total = sum(medium), high_total = sum(high)) %>%
-  ungroup() %>%
-  mutate(low_holdout = low_total - low, medium_holdout = medium_total - medium, high_holdout = high_total - high, total_holdout = low_holdout + medium_holdout + high_holdout) %>%
-  mutate(low_building_weight = low_holdout / total_holdout, medium_building_weight = medium_holdout / total_holdout, high_building_weight = high_holdout / total_holdout) %>%
-  rename(n_building_weight = total_holdout) %>%
-  select(-low, -medium, -high, -low_total, -medium_total, -high_total, -low_holdout, -medium_holdout, -high_holdout)
-
-data3$low_building_weight[data3$building_id != 0 | data3$n_building_weight == 0] <- NA
-data3$medium_building_weight[data3$building_id != 0 | data3$n_building_weight == 0] <- NA
-data3$high_building_weight[data3$building_id != 0 | data3$n_building_weight == 0] <- NA
 
 # create intercepts for top buildings
 top_buildings <- data3 %>%
@@ -194,30 +146,6 @@ for (i in 1:nrow(top_buildings)){
   b2 <- top_buildings$building_id2[i]
   data3[[b2]] <- ifelse(data3$building_id == b1, 1, 0)
 }
-
-# create manager weights (leave one out cv)
-manager_weights <- data3 %>%
-  group_by(manager_id) %>% 
-  summarise(low = sum(interest_level == "low"), medium = sum(interest_level == "medium"), high = sum(interest_level == "high")) %>%
-  mutate(low_total = sum(low), medium_total = sum(medium), high_total = sum(high)) %>%
-  mutate(total = low + medium + high, total_total = low_total + medium_total + high_total) %>%
-  mutate(low_manager_weight = low / total, medium_manager_weight = medium / total, high_manager_weight = high / total) %>%
-  rename(n_manager_weight = total) %>%
-  select(manager_id, low_manager_weight, medium_manager_weight, high_manager_weight, n_manager_weight)
-
-data3 <- data3 %>%
-  group_by(manager_id) %>% 
-  mutate(low = as.integer(interest_level == "low"), medium = as.integer(interest_level == "medium"), high = as.integer(interest_level == "high")) %>%
-  mutate(low_total = sum(low), medium_total = sum(medium), high_total = sum(high)) %>%
-  ungroup() %>%
-  mutate(low_holdout = low_total - low, medium_holdout = medium_total - medium, high_holdout = high_total - high, total_holdout = low_holdout + medium_holdout + high_holdout) %>%
-  mutate(low_manager_weight = low_holdout / total_holdout, medium_manager_weight = medium_holdout / total_holdout, high_manager_weight = high_holdout / total_holdout) %>%
-  rename(n_manager_weight = total_holdout) %>%
-  select(-low, -medium, -high, -low_total, -medium_total, -high_total, -low_holdout, -medium_holdout, -high_holdout)
-
-data3$low_manager_weight[data3$n_manager_weight == 0] <- NA
-data3$medium_manager_weight[data3$n_manager_weight == 0] <- NA
-data3$high_manager_weight[data3$n_manager_weight == 0] <- NA
 
 # create intercepts for top managers
 top_managers <- data3 %>%
@@ -283,7 +211,7 @@ data3[,ngram_field_names][is.na(data3[,ngram_field_names])] <- 0
 
 # qc that we made all our features correctly
 apply(data3[,grep("[f,n,b,m,k][0-9]{3}", names(data3), value=TRUE)], 2, sum)
-model_exclude_var <- c("description", "created", "listing_id", "building_id", "manager_id", "neighborhood_id", "neighborhood", "latitude", "longitude", "display_address", "street_address", "cv", "n_building_weight", "n_manager_weight")
+model_exclude_var <- c("description", "created", "listing_id", "building_id", "manager_id", "neighborhood_id", "neighborhood", "latitude", "longitude", "display_address", "street_address")
 
 # set up cross-validation
 cv <- sample(1:5, nrow(data3), replace=TRUE)
@@ -293,9 +221,6 @@ data_train_raw <- data2
 data_train_processed <- data3
 save(data_train_raw, data_train_processed, cv, model_exclude_var, 
   perc_low, perc_med, perc_high, top_features,
-  neighborhood_weights, top_neighborhoods, 
-  building_weights, top_buildings, 
-  manager_weights, top_managers, 
-  top_ngrams, ngram_principal_factors, 
+  top_neighborhoods, top_buildings, top_managers, top_ngrams, ngram_principal_factors, 
   file = "./data/extract_train.Rdata")
 
