@@ -6,66 +6,38 @@ set.seed(1)
 # load data
 load("./data/extract_train.Rdata")
 load("./data/extract_test.Rdata")
+source("./setup/model_feature.R")
 source("extra.R")
 
 # parameters
 alpha <- 1
 nlambda <- 100
-small_sample_cutoff <- 5
 
-# create modeling datasets
-low_weights <- c("low_neighborhood_weight", "low_building_weight", "low_manager_weight")
-med_weights <- c("medium_neighborhood_weight", "medium_building_weight", "medium_manager_weight")
-high_weights <- c("high_neighborhood_weight", "high_building_weight", "high_manager_weight")
+high_card_small_sample_cutoff <- 5
+high_card_round <- 1
+high_card_leave_one_out <- 1
 
-data_train_processed[,low_weights][is.na(data_train_processed[,low_weights])] <- perc_low
-data_train_processed[,med_weights][is.na(data_train_processed[,med_weights])] <- perc_med
-data_train_processed[,high_weights][is.na(data_train_processed[,high_weights])] <- perc_high
+# set up datasets on all data
+data_train_processed2 <- add_high_card_weights_train(data_train_processed, high_card_leave_one_out)
+data_train_processed2 <- add_noise(data_train_processed2)
+data_train_processed2 <- smooth_low_sample_weights(data_train_processed2, high_card_small_sample_cutoff, high_card_round)
+data_train_processed2 <- make_binary(data_train_processed2, grep("[k][0-9]{3}", names(data_train_processed2), value=TRUE), 0)
 
-data_train_processed <- data_train_processed %>%
-  mutate(w1 = ifelse(n_neighborhood_weight > small_sample_cutoff, 1, n_neighborhood_weight / small_sample_cutoff), w2 = 1 - w1) %>%
-  mutate(low_neighborhood_weight = w1 * low_neighborhood_weight + w2 * perc_low) %>%
-  mutate(medium_neighborhood_weight = w1 * medium_neighborhood_weight + w2 * perc_med) %>%
-  mutate(high_neighborhood_weight = w1 * high_neighborhood_weight + w2 * perc_high) %>%
-  select(-w1, -w2) %>%
-  mutate(w1 = ifelse(n_building_weight > small_sample_cutoff, 1, n_building_weight / small_sample_cutoff), w2 = 1 - w1) %>%
-  mutate(low_building_weight = w1 * low_building_weight + w2 * perc_low) %>%
-  mutate(medium_building_weight = w1 * medium_building_weight + w2 * perc_med) %>%
-  mutate(high_building_weight = w1 * high_building_weight + w2 * perc_high) %>%
-  select(-w1, -w2) %>%
-  mutate(w1 = ifelse(n_manager_weight > small_sample_cutoff, 1, n_manager_weight / small_sample_cutoff), w2 = 1 - w1) %>%
-  mutate(low_manager_weight = w1 * low_manager_weight + w2 * perc_low) %>%
-  mutate(medium_manager_weight = w1 * medium_manager_weight + w2 * perc_med) %>%
-  mutate(high_manager_weight = w1 * high_manager_weight + w2 * perc_high) %>%
-  select(-w1, -w2)
+data_test_processed2 <- add_high_card_weights_test(data_train_processed2, data_test_processed)
+data_test_processed2 <- smooth_low_sample_weights(data_test_processed2, high_card_small_sample_cutoff, high_card_round)
+data_test_processed2 <- make_binary(data_test_processed2, grep("[k][0-9]{3}", names(data_test_processed2), value=TRUE), 0)
 
-data_test_processed[,low_weights][is.na(data_test_processed[,low_weights])] <- perc_low
-data_test_processed[,med_weights][is.na(data_test_processed[,med_weights])] <- perc_med
-data_test_processed[,high_weights][is.na(data_test_processed[,high_weights])] <- perc_high
+holdouts <- c(
+  model_exclude_var, 
+  "n_neighborhood_weight", "n_building_weight", "n_manager_weight",
+  grep("[k][0-9]{3}", names(data_train_processed2), value=TRUE)
+)
+ydata <- as.numeric(data_train_processed2$interest_level)-1
+xvar <- setdiff(names(data_train_processed2), c("interest_level", holdouts))
+xdata <- Matrix(as.matrix(data_train_processed2[,xvar]), sparse = TRUE)
+xdata2 <- Matrix(as.matrix(data_test_processed2[,xvar]), sparse = TRUE)
 
-data_test_processed <- data_test_processed %>%
-  mutate(w1 = ifelse(n_neighborhood_weight > small_sample_cutoff, 1, n_neighborhood_weight / small_sample_cutoff), w2 = 1 - w1) %>%
-  mutate(low_neighborhood_weight = w1 * low_neighborhood_weight + w2 * perc_low) %>%
-  mutate(medium_neighborhood_weight = w1 * medium_neighborhood_weight + w2 * perc_med) %>%
-  mutate(high_neighborhood_weight = w1 * high_neighborhood_weight + w2 * perc_high) %>%
-  select(-w1, -w2) %>%
-  mutate(w1 = ifelse(n_building_weight > small_sample_cutoff, 1, n_building_weight / small_sample_cutoff), w2 = 1 - w1) %>%
-  mutate(low_building_weight = w1 * low_building_weight + w2 * perc_low) %>%
-  mutate(medium_building_weight = w1 * medium_building_weight + w2 * perc_med) %>%
-  mutate(high_building_weight = w1 * high_building_weight + w2 * perc_high) %>%
-  select(-w1, -w2) %>%
-  mutate(w1 = ifelse(n_manager_weight > small_sample_cutoff, 1, n_manager_weight / small_sample_cutoff), w2 = 1 - w1) %>%
-  mutate(low_manager_weight = w1 * low_manager_weight + w2 * perc_low) %>%
-  mutate(medium_manager_weight = w1 * medium_manager_weight + w2 * perc_med) %>%
-  mutate(high_manager_weight = w1 * high_manager_weight + w2 * perc_high) %>%
-  select(-w1, -w2)
-
-holdouts <- c(model_exclude_var, grep("[k][0-9]{3}", names(data_train_processed), value=TRUE))
-ydata <- as.numeric(data_train_processed$interest_level)-1
-xdata <- Matrix(as.matrix(data_train_processed[,setdiff(names(data_train_processed), c("interest_level", holdouts))]), sparse = TRUE)
-xdata2 <- Matrix(as.matrix(data_test_processed[,setdiff(names(data_test_processed), holdouts)]), sparse = TRUE)
-
-# base glm model on all data
+# base model on all data; use lambda path for cross-validation samples
 glm_base <- glmnet(x = xdata, y = ydata, family = "multinomial", alpha = alpha, nlambda = nlambda)
 lambda_path <- glm_base$lambda
 
@@ -78,13 +50,28 @@ for (i in 1:5){
   # set up test and train
   train <- which(cv != i)
   test <- which(cv == i)
+
+  xdata_i_train <- add_high_card_weights_train(data_train_processed[train,], high_card_leave_one_out)
+  xdata_i_train <- add_noise(xdata_i_train)
+  xdata_i_train <- smooth_low_sample_weights(xdata_i_train, high_card_small_sample_cutoff, high_card_round)  
+  xdata_i_train <- make_binary(xdata_i_train, grep("[k][0-9]{3}", names(xdata_i_train), value=TRUE), 0)
+  xdata_i_train <- Matrix(as.matrix(xdata_i_train[,xvar]), sparse = TRUE)
   
+  # use train averages
+  xdata_i_test1 <- add_high_card_weights_test(data_train_processed[train,], data_train_processed[test,])
+  xdata_i_test1 <- smooth_low_sample_weights(xdata_i_test1, high_card_small_sample_cutoff, high_card_round)  
+  xdata_i_test1 <- make_binary(xdata_i_test1, grep("[k][0-9]{3}", names(xdata_i_test1), value=TRUE), 0)
+  xdata_i_test1 <- Matrix(as.matrix(xdata_i_test1[,xvar]), sparse = TRUE)
+  
+  # leave one out on CV test+train
+  xdata_i_test2 <- xdata[test,]
+    
   # run model
-  glm <- glmnet(x = xdata[train,], y = ydata[train], family = "multinomial", alpha = alpha, lambda = lambda_path)
+  glm <- glmnet(x = xdata_i_train, y = ydata[train], family = "multinomial", alpha = alpha, lambda = lambda_path)
   
   # generate predictions
   lambda_mlogloss <- sapply(glm$lambda, function(l){
-    predictions <- matrix(predict(glm, xdata[test,],  s = l, type = "response"), ncol = 3, byrow = FALSE)
+    predictions <- matrix(predict(glm, xdata_i_test1,  s = l, type = "response"), ncol = 3, byrow = FALSE)
     return(multiloss(predictions, ydata[test]))
   })
   
@@ -92,7 +79,12 @@ for (i in 1:5){
   optimal_lambda[i] <- glm$lambda[which.min(lambda_mlogloss)]
   
   # generate predictions
-  validate_predictions[test,] <- matrix(predict(glm, xdata[test,],  s = optimal_lambda[i], type = "response"), ncol = 3, byrow = FALSE)
+  validate_predictions1 <- matrix(predict(glm, xdata_i_test1,  s = optimal_lambda[i], type = "response"), ncol = 3, byrow = FALSE)
+  validate_predictions2 <- matrix(predict(glm, xdata_i_test2,  s = optimal_lambda[i], type = "response"), ncol = 3, byrow = FALSE)
+  print(multiloss(validate_predictions1, ydata[test]))
+  print(multiloss(validate_predictions2, ydata[test]))
+  validate_predictions[test,] <- (validate_predictions1 + validate_predictions2) / 2
+    
 }
 
 # calculate multilogloss
@@ -107,4 +99,4 @@ test_predictions$listing_id <- data_test_processed$listing_id
 
 # save
 save(glm_base, optimal_lambda_final, validate_multiloss, validate_predictions, test_predictions, file = "./models/glmnet.Rdata")
-
+write.csv(test_predictions, "./data/predictions_glmnet.csv", row.names = FALSE)
