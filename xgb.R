@@ -11,15 +11,15 @@ source("./setup/model_feature.R")
 source("extra.R")
 
 # parameters
-eta <- 0.3
+eta <- 0.02
 min_child_weight <- 3
 max_depth <- 6
 colsample_bytree <- 0.4
 subsample <- 1
-nrounds <- 500
+nrounds <- 2000
 
 high_card_small_sample_cutoff <- 5
-high_card_round <- 20
+high_card_round <- 10
 high_card_leave_one_out <- 1
 
 # set up datasets on all data
