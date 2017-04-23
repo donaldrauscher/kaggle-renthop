@@ -32,15 +32,6 @@ data_test_processed2 <- add_high_card_weights_test(data_train_processed2, data_t
 data_test_processed2 <- smooth_low_sample_weights(data_test_processed2, high_card_small_sample_cutoff, high_card_round)
 data_test_processed2 <- make_binary(data_test_processed2, grep("[k][0-9]{3}", names(data_test_processed2), value=TRUE), 0)
 
-# experiment with some other variable manipulations
-data_train_processed2$price[data_train_processed2$price > 30000] <- 30000
-data_test_processed2$price[data_test_processed2$price > 30000] <- 30000
-
-data_train_processed2 <- data_train_processed2 %>%
-  mutate(
-    logprice = log(price)
-  )
-
 holdouts <- c(model_exclude_var, "n_neighborhood_weight", "n_building_weight", "n_manager_weight")
 ydata <- as.numeric(data_train_processed2$interest_level)-1
 xvar <- setdiff(names(data_train_processed2), c("interest_level", holdouts))
