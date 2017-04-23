@@ -25,13 +25,39 @@ data2 <- data.frame(
   "latitude"=unlist(data$latitude),
   "longitude"=unlist(data$longitude),
   "price"=unlist(data$price),
-  "n_photo"=unlist(lapply(data$features, function(x) length(x))),
+  "n_photo"=unlist(lapply(data$photos, function(x) length(x))),
+  "n_features"=unlist(lapply(data$features, function(x) length(x))),
   stringsAsFactors=FALSE
 )
 
 # create a few base variables
 data3 <- data2
-data3 <- data3 %>% mutate(bedrooms_minus_bathrooms = bedrooms - bathrooms, price_per_bedroom = price / ifelse(bedrooms == 0, 1, bedrooms))
+data3$price[data3$price > 30000] <- 30000
+data3 <- data3 %>% 
+  mutate(
+    logprice = log(price),
+    bedrooms_minus_bathrooms = bedrooms - bathrooms, 
+    price_per_bedroom = price / ifelse(bedrooms == 0, 1, bedrooms),
+    total_rooms = bedrooms + bathrooms,
+    price_per_room = price / ifelse(total_rooms == 0, 1, total_rooms)
+  )
+
+# days of week / hour of day variables
+weekdays <- weekdays(data3$created)
+data$is_monday <- as.integer(weekdays == "Monday")
+data$is_tuesday <- as.integer(weekdays == "Tuesday")
+data$is_wednesday <- as.integer(weekdays == "Wednesday")
+data$is_thursday <- as.integer(weekdays == "Thursday")
+data$is_friday <- as.integer(weekdays == "Friday")
+data$is_saturday <- as.integer(weekdays == "Saturday")
+data$is_sunday <- as.integer(weekdays == "Sunday")
+
+hours <- hour(data3$created)
+hours2 <- ifelse(hours <= 5, "Early Morning", ifelse(hours <= 11, "Late Morning", ifelse(hours <= 16, "Afternoon", "Evening")))
+data$is_early_morning <- as.integer(hours2 == "Early Morning")
+data$is_late_morning <- as.integer(hours2 == "Late Morning")
+data$is_afternoon <- as.integer(hours2 == "Afternoon")
+data$is_evening <- as.integer(hours2 == "Evening")
 
 # create binary flags for each feature
 feature_map <- data.frame(
@@ -111,6 +137,34 @@ ngrams <- as.data.frame(keywords %*% as.matrix(ngram_principal_factors$loadings)
 names(ngrams) <- paste0("k", sprintf("%03d", 1:ncol(ngram_principal_factors$loadings)))
 
 data3 <- cbind(data3, ngrams)
+
+# add average price per room for each neighborhood
+neighborhood_price <- rbind(
+  data_train_processed %>% select(neighborhood_id, bedrooms, price),
+  data3 %>% select(neighborhood_id, bedrooms, price)
+)
+
+neighborhood_price <- neighborhood_price %>% 
+  group_by(neighborhood_id, bedrooms) %>%
+  summarise(neighborhood_price = median(price))
+
+data3 <- data3 %>% 
+  left_join(neighborhood_price, by = c("neighborhood_id", "bedrooms")) %>%
+  mutate(price_vs_neighborhood = price / neighborhood_price) %>% select(-neighborhood_price)
+
+# add average price per room for each building
+building_price <- rbind(
+  data_train_processed %>% select(building_id, bedrooms, price),
+  data3 %>% select(building_id, bedrooms, price)
+)
+
+building_price <- building_price %>% 
+  group_by(building_id, bedrooms) %>%
+  summarise(building_price = median(price))
+
+data3 <- data3 %>% 
+  left_join(building_price, by = c("building_id", "bedrooms")) %>%
+  mutate(price_vs_building = price / building_price) %>% select(-building_price)
 
 # set up final dataframes
 data_test_raw <- data2
