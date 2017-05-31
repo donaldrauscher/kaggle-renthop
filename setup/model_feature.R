@@ -167,9 +167,9 @@ smooth_low_sample_weights <- function(df, low_sample_cutoff = 5, high_card_round
 }
 
 # add noise
-add_noise <- function(df, fields = all_weights){
+add_noise <- function(df, fields = all_weights, std = 0.05){
   df[,fields] <- df[,fields] * 
-    matrix(rnorm(length(fields) * nrow(df), 1, 0.05), ncol = length(fields), nrow = nrow(df))
+    matrix(rnorm(length(fields) * nrow(df), 1, std), ncol = length(fields), nrow = nrow(df))
   return(df)
 }
 
