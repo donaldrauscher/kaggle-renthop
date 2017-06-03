@@ -2,7 +2,7 @@
 
 # install r
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
-sudo add-apt-repository 'deb https://cran.rstudio.com/bin/linux/ubuntu xenial/'
+sudo add-apt-repository 'deb https://cran.rstudio.com/bin/linux/ubuntu zesty/'
 sudo apt-get update
 sudo apt-get install r-base r-base-dev
 
@@ -25,4 +25,4 @@ sudo rstudio-server start
 
 # add r libs library so stuff installed in rstudio accessible via rscript
 su rstudio
-echo 'export R_LIBS="/home/rstudio/R/x86_64-pc-linux-gnu-library/3.2"' >>~/.bashrc
+echo 'export R_LIBS="/home/rstudio/R/x86_64-pc-linux-gnu-library/3.4"' >>~/.bashrc
