@@ -64,5 +64,7 @@ names(test_predictions) <- c("low", "medium", "high")
 test_predictions$listing_id <- xdata2_id
 
 # save
-save(xgb_base, validate_multiloss, validate_predictions, test_predictions, file = sprintf("./models/%s_xgb.Rdata", args$u))
-write.csv(test_predictions, sprintf("./models/test_predictions/%s_xgb.csv", args$u), row.names = FALSE)
+model_name <- sprintf("%s_xgb", args$u)
+assign(model_name, list(model = xgb_base, validate_multiloss = validate_multiloss, validate_predictions = validate_predictions, test_predictions = test_predictions))
+save(list = c(model_name), file = sprintf("./models/%s.Rdata", model_name))
+write.csv(test_predictions, sprintf("./models/test_predictions/%s.csv", model_name), row.names = FALSE)
