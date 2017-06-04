@@ -37,13 +37,11 @@ probabilize_high_card_cat <- function(df, y, x, seg){
     } else {
       par <- beta_mle(ll_fn = dbetabinom_ll, k = dist$k[dist$n_bkt == l], n = dist$n[dist$n_bkt == l])
     }
-    dist$a[dist$n_bkt == l] <- par[1]; dist$b[dist$n_bkt == l] <- par[2]
     df$a[df$n_bkt == l] <- par[1]; df$b[df$n_bkt == l] <- par[2]
   }
-  dist <- mutate(dist, y2 = (a + k) / (a + b + n))
   df <- df %>% 
-    left_join(dist %>% select(x, y2), by = c("x")) %>%
-    mutate(y2 = ifelse(is.na(y2), a / (a + b), y2))
+    group_by(x) %>% mutate(k = sum(y) - ifelse(!is.na(y), y, 0), n = n() - as.integer(!is.na(y))) %>% ungroup() %>%
+    mutate(y2 = (a + k) / (a + b + n))
   return(df$y2)
 }
 
