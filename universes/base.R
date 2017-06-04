@@ -1,4 +1,5 @@
 library(dplyr)
+library(rjson)
 library(Matrix)
 
 set.seed(1)
@@ -8,6 +9,11 @@ source("./util.R")
 load("./data/extract_train.Rdata")
 load("./data/extract_test.Rdata")
 source("./setup/feature_functions.R")
+
+# pull in universe params and set defaults if missing
+univ_param <- fromJSON(args$univ_param)
+if(is.null(univ_param$add_noise)) univ_param$add_noise <- 1
+if(is.null(univ_param$include_kw_var)) univ_param$include_kw_var <- 1
 
 # combine datasets
 data_all_processed <- bind_rows(data_train_processed, data_test_processed)
@@ -27,15 +33,21 @@ add_high_card_cat <- function(df){
 
 data_all_processed2 <- add_high_card_cat(data_all_processed)
 
-# add noise to train / impute for test
+# add noise to train
 high_card_cat <- c("building_interest_h", "building_interest_m", "manager_interest_h", "manager_interest_m", "neighborhood_interest_h", "neighborhood_interest_m") 
-data_all_processed2 <- add_noise(data_all_processed2, is_train, high_card_cat)
+if (univ_param$add_noise){
+  data_all_processed2 <- add_noise(data_all_processed2, is_train, high_card_cat)
+}
 
 # make some variables binary
 kw_var <- grep("[k][0-9]{3}", names(data_all_processed2), value=TRUE)
 data_all_processed2 <- make_binary(data_all_processed2, kw_var, 0)
 
+# assemble x and y
 holdouts <- model_exclude_var
+if (!univ_param$include_kw_var){
+  holdouts <- c(holdouts, kw_var)
+}
 ydata <- as.numeric(data_all_processed2$interest_level[is_train])-1
 xvar <- setdiff(names(data_all_processed2), c("interest_level", holdouts))
 xdata <- Matrix(as.matrix(data_all_processed2[is_train,xvar]), sparse = TRUE)

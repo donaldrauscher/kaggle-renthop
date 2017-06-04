@@ -7,10 +7,11 @@ source("util.R")
 
 # load universe
 parser <- ArgumentParser()
-parser$add_argument("--u", type = "character")
+parser$add_argument("--univ", type = "character")
+parser$add_argument("--univ-param", type = "character", default = "{}")
 args <- parser$parse_args()
 
-source(sprintf("./universes/%s.R", args$u))
+source(sprintf("./universes/%s.R", args$univ))
 
 # parameters
 alpha <- 1
@@ -60,7 +61,7 @@ names(test_predictions) <- c("low", "medium", "high")
 test_predictions$listing_id <- xdata2_id
 
 # save
-model_name <- sprintf("%s_glmnet", args$u)
+model_name <- sprintf("%s_glmnet", args$univ)
 assign(model_name, list(model = glm_base, validate_multiloss = validate_multiloss, validate_predictions = validate_predictions, test_predictions = test_predictions))
 save(list = c(model_name), file = sprintf("./models/%s.Rdata", model_name))
 write.csv(test_predictions, sprintf("./models/test_predictions/%s.csv", model_name), row.names = FALSE)
