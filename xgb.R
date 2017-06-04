@@ -10,23 +10,25 @@ source("util.R")
 parser <- ArgumentParser()
 parser$add_argument("--univ", type = "character")
 parser$add_argument("--univ-param", type = "character", default = "{}")
+parser$add_argument("--model-param", type = "character", default = "{}")
 args <- parser$parse_args()
 
 source(sprintf("./universes/%s.R", args$univ))
 
-# parameters
-eta <- 0.02
-min_child_weight <- 3
-max_depth <- 6
-colsample_bytree <- 0.4
-subsample <- 1
-nrounds <- 2000
+# model parameters
+model_param <- fromJSON(args$model_param)
+if(is.null(model_param$eta)) model_param$eta <- 0.02
+if(is.null(model_param$min_child_weight)) model_param$min_child_weight <- 3
+if(is.null(model_param$max_depth)) model_param$max_depth <- 6
+if(is.null(model_param$colsample_bytree)) model_param$colsample_bytree <- 0.4
+if(is.null(model_param$subsample)) model_param$subsample <- 1
+if(is.null(model_param$gamma)) model_param$gamma <- 0
+if(is.null(model_param$nrounds)) model_param$nrounds <- 2000
 
-# xgb params
 params <- list(
-  eta = eta, min_child_weight = min_child_weight,
-  max_depth = max_depth, colsample_bytree = colsample_bytree, subsample = subsample,
-  gamma = 0, objective = "multi:softprob", num_class = 3, eval_metric = "mlogloss"  
+  eta = model_param$eta, min_child_weight = model_param$min_child_weight,
+  max_depth = model_param$max_depth, colsample_bytree = model_param$colsample_bytree, subsample = model_param$subsample,
+  gamma = model_param$gamma, objective = "multi:softprob", num_class = 3, eval_metric = "mlogloss"  
 )
 
 # build models for each cross validation fold

@@ -9,16 +9,18 @@ source("util.R")
 parser <- ArgumentParser()
 parser$add_argument("--univ", type = "character")
 parser$add_argument("--univ-param", type = "character", default = "{}")
+parser$add_argument("--model-param", type = "character", default = "{}")
 args <- parser$parse_args()
 
 source(sprintf("./universes/%s.R", args$univ))
 
-# parameters
-alpha <- 1
-nlambda <- 100
+# model parameters
+model_param <- fromJSON(args$model_param)
+if(is.null(model_param$alpha)) model_param$alpha <- 1
+if(is.null(model_param$nlambda)) model_param$nlambda <- 100
 
 # base model on all data; use lambda path for cross-validation samples
-glm_base <- glmnet(x = xdata, y = ydata, family = "multinomial", alpha = alpha, nlambda = nlambda)
+glm_base <- glmnet(x = xdata, y = ydata, family = "multinomial", alpha = model_param$alpha, nlambda = model_param$nlambda)
 lambda_path <- glm_base$lambda
 
 # build overall model
@@ -32,7 +34,7 @@ for (i in 1:max(cv)){
   xdata_test <- cv_data[[i]]$xdata_test
   train <- cv_data[[i]]$train
   test <- cv_data[[i]]$test
-  glm <- glmnet(x = xdata_train, y = ydata[train], family = "multinomial", alpha = alpha, lambda = lambda_path)
+  glm <- glmnet(x = xdata_train, y = ydata[train], family = "multinomial", alpha = model_param$alpha, lambda = lambda_path)
   
   # generate predictions
   lambda_mlogloss <- sapply(glm$lambda, function(l){
