@@ -14,6 +14,7 @@ source("./setup/feature_functions.R")
 univ_param <- fromJSON(args$univ_param)
 if(is.null(univ_param$add_noise)) univ_param$add_noise <- 1
 if(is.null(univ_param$include_kw_var)) univ_param$include_kw_var <- 1
+if(is.null(univ_param$high_card_loo)) univ_param$high_card_loo <- 1
 
 # combine datasets
 data_all_processed <- bind_rows(data_train_processed, data_test_processed)
@@ -21,13 +22,14 @@ is_train <- which(!is.na(data_all_processed$interest_level))
 is_test <- inv_which(is_train, nrow(data_all_processed))
 
 # add high-cardinality categorical
+high_card_seg <- c(0, 10, 20, 30, Inf)
 add_high_card_cat <- function(df){
-  df$building_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), building_id, c(0, 10, 20, 30, Inf))
-  df$building_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), building_id, c(0, 10, 20, 30, Inf))
-  df$manager_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), manager_id, c(0, 10, 20, 30, Inf))
-  df$manager_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), manager_id, c(0, 10, 20, 30, Inf))
-  df$neighborhood_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), neighborhood_id, c(0, 10, 20, 30, Inf))
-  df$neighborhood_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), neighborhood_id, c(0, 10, 20, 30, Inf))
+  df$building_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), building_id, high_card_seg, univ_param$high_card_loo)
+  df$building_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), building_id, high_card_seg, univ_param$high_card_loo)
+  df$manager_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), manager_id, high_card_seg, univ_param$high_card_loo)
+  df$manager_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), manager_id, high_card_seg, univ_param$high_card_loo)
+  df$neighborhood_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), neighborhood_id, high_card_seg, univ_param$high_card_loo)
+  df$neighborhood_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), neighborhood_id, high_card_seg, univ_param$high_card_loo)
   return(df)
 }
 

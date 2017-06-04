@@ -22,7 +22,7 @@ beta_mle <- function(ll_fn, ...){
 }
 
 # function for probabilizing high cardinality categorical variable
-probabilize_high_card_cat <- function(df, y, x, seg){
+probabilize_high_card_cat <- function(df, y, x, seg, loo){
   df$y <- f_eval(f_capture(y), df); df$x <- f_eval(f_capture(x), df)
   df <- df %>% group_by(x) %>% mutate(n_bkt = cut(n(), breaks = seg), a = NA, b = NA) %>% ungroup()
   dist <- df %>% 
@@ -40,7 +40,10 @@ probabilize_high_card_cat <- function(df, y, x, seg){
     df$a[df$n_bkt == l] <- par[1]; df$b[df$n_bkt == l] <- par[2]
   }
   df <- df %>% 
-    group_by(x) %>% mutate(k = sum(y) - ifelse(!is.na(y), y, 0), n = n() - as.integer(!is.na(y))) %>% ungroup() %>%
+    group_by(x) %>% mutate(
+      k = sum(y, na.rm = TRUE) - loo * ifelse(!is.na(y), y, 0), 
+      n = sum(!is.na(y), na.rm = TRUE) - loo * as.integer(!is.na(y))
+    ) %>% ungroup() %>%
     mutate(y2 = (a + k) / (a + b + n))
   return(df$y2)
 }
