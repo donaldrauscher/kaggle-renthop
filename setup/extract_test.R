@@ -76,7 +76,7 @@ data3 <- data3 %>% left_join(feature_map, by="listing_id")
 data3[,names(feature_map)[-1]][is.na(data3[,names(feature_map)[-1]])] <- 0 
 
 # align listings with neighborhoods from zillow
-neighborhoods <- readShapePoly("ZillowNeighborhoods-NY/ZillowNeighborhoods-NY.shp")
+neighborhoods <- readShapePoly("./resources/ZillowNeighborhoods-NY/ZillowNeighborhoods-NY.shp")
 neighborhood_points <- fortify(neighborhoods) # fortify from ggplot2
 
 neighborhood_data <- attr(neighborhoods,"data")
