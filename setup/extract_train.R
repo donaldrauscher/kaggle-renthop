@@ -244,13 +244,10 @@ data3 <- data3 %>%
 apply(data3[,grep("[f,n,b,m,k][0-9]{3}", names(data3), value=TRUE)], 2, sum)
 model_exclude_var <- c("description", "created", "listing_id", "building_id", "manager_id", "neighborhood_id", "neighborhood", "latitude", "longitude", "display_address", "street_address")
 
-# set up cross-validation
-cv <- sample(1:5, nrow(data3), replace=TRUE)
-
 # save
 data_train_raw <- data2
 data_train_processed <- data3
-save(data_train_raw, data_train_processed, cv, model_exclude_var, 
+save(data_train_raw, data_train_processed, model_exclude_var, 
   perc_low, perc_med, perc_high, 
   top_features, top_neighborhoods, top_buildings, top_managers, top_ngrams, ngram_principal_factors, 
   file = "./data/extract_train.Rdata")
