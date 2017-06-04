@@ -37,7 +37,7 @@ data_all_processed2 <- add_noise(data_all_processed2, is_train, high_card_cat)
 kw_var <- grep("[k][0-9]{3}", names(data_all_processed2), value=TRUE)
 data_all_processed2 <- make_binary(data_all_processed2, kw_var, 0)
 
-holdouts <- c(model_exclude_var, grep("[m,b][0-9]{3}", names(data_all_processed2), value=TRUE))
+holdouts <- model_exclude_var
 ydata <- as.numeric(data_all_processed2$interest_level[is_train])-1
 xvar <- setdiff(names(data_all_processed2), c("interest_level", holdouts))
 xdata <- Matrix(as.matrix(data_all_processed2[is_train,xvar]), sparse = TRUE)
