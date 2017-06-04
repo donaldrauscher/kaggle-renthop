@@ -4,3 +4,6 @@ multiloss <- function(predicted, actual){
   actual_m <- as.matrix(sapply(min(actual):max(actual), function(x) ifelse(actual == x, 1, 0)))
   return(-sum(actual_m*log(predicted_m)) / nrow(actual_m))
 }
+
+# inverse of a set of indices
+inv_which <- function(indices, tot) setdiff(seq_len(tot), indices)

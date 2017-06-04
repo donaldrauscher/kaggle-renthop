@@ -3,6 +3,7 @@ library(dplyr)
 library(argparse)
 
 set.seed(1)
+source("util.R")
 
 # load universe
 parser <- ArgumentParser()
@@ -10,9 +11,6 @@ parser$add_argument("--u", type = "character")
 args <- parser$parse_args()
 
 source(sprintf("./universes/%s.R", args$u))
-
-# load eval function
-source("multiloss.R")
 
 # parameters
 alpha <- 1

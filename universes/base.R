@@ -2,14 +2,12 @@ library(dplyr)
 library(Matrix)
 
 set.seed(1)
+source("./util.R")
 
 # load data
 load("./data/extract_train.Rdata")
 load("./data/extract_test.Rdata")
 source("./setup/feature_functions.R")
-
-# some useful functions
-inv_which <- function(indices, tot) setdiff(seq_len(tot), indices)
 
 # combine datasets
 data_all_processed <- bind_rows(data_train_processed, data_test_processed)
