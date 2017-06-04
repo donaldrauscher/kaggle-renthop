@@ -63,7 +63,7 @@ validate_multiloss
 xgb_base <- xgboost(data = xdata, label = ydata, params = params, nrounds = round(mean(best_ntreelimit)))
 test_predictions <- as.data.frame(predict(xgb_base, xdata2, reshape = TRUE))
 names(test_predictions) <- c("low", "medium", "high")
-test_predictions$listing_id <- data_test_processed$listing_id
+test_predictions$listing_id <- xdata2_id
 
 # save
 save(xgb_base, validate_multiloss, validate_predictions, test_predictions, file = sprintf("./models/%s_xgb.Rdata", args$u))

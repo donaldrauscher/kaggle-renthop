@@ -59,7 +59,7 @@ validate_multiloss
 optimal_lambda_final <- min(lambda_path[lambda_path >= mean(optimal_lambda)])
 test_predictions <- as.data.frame(matrix(predict(glm_base, xdata2,  s = optimal_lambda_final, type = "response"), ncol = 3, byrow = FALSE))
 names(test_predictions) <- c("low", "medium", "high")
-test_predictions$listing_id <- data_test_processed$listing_id
+test_predictions$listing_id <- xdata2_id
 
 # save
 save(glm_base, validate_multiloss, validate_predictions, test_predictions, file = sprintf("./models/%s_glmnet.Rdata", args$u))
