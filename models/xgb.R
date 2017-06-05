@@ -8,6 +8,8 @@ source("./snippets/util.R")
 
 # load universe
 parser <- ArgumentParser()
+parser$add_argument("--pipeline", type = "character")
+parser$add_argument("--step", type = "character")
 parser$add_argument("--univ", type = "character")
 parser$add_argument("--univ-param", type = "character", default = "{}")
 parser$add_argument("--model-param", type = "character", default = "{}")
@@ -43,7 +45,7 @@ for (i in 1:max(cv)){
   watchlist <- list(train=dtrain, test = dtest)
   callbacks <- list(cb.early.stop(stopping_rounds = 25, maximize = FALSE, metric_name = "test-mlogloss", verbose = TRUE))
   xgb <- xgb.train(
-    data = dtrain, params = params, nrounds = nrounds, 
+    data = dtrain, params = params, nrounds = model_param$nrounds, 
     watchlist = watchlist, callbacks = callbacks
   )
 
@@ -67,7 +69,5 @@ names(test_predictions) <- c("low", "medium", "high")
 test_predictions$listing_id <- xdata2_id
 
 # save
-model_name <- sprintf("%s_xgb", args$univ)
-assign(model_name, list(model = xgb_base, validate_multiloss = validate_multiloss, validate_predictions = validate_predictions, test_predictions = test_predictions))
-save(list = c(model_name), file = sprintf("./data/models/%s.Rdata", model_name))
-write.csv(test_predictions, sprintf("./data/test_predictions/%s.csv", model_name), row.names = FALSE)
+model_type <- "xgb"
+source("./snippets/model_export.R")

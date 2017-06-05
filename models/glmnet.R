@@ -7,6 +7,8 @@ source("./snippets/util.R")
 
 # load universe
 parser <- ArgumentParser()
+parser$add_argument("--pipeline", type = "character")
+parser$add_argument("--step", type = "character")
 parser$add_argument("--univ", type = "character")
 parser$add_argument("--univ-param", type = "character", default = "{}")
 parser$add_argument("--model-param", type = "character", default = "{}")
@@ -20,8 +22,8 @@ if(is.null(model_param$alpha)) model_param$alpha <- 1
 if(is.null(model_param$nlambda)) model_param$nlambda <- 100
 
 # base model on all data; use lambda path for cross-validation samples
-glm_base <- glmnet(x = xdata, y = ydata, family = "multinomial", alpha = model_param$alpha, nlambda = model_param$nlambda)
-lambda_path <- glm_base$lambda
+glmnet_base <- glmnet(x = xdata, y = ydata, family = "multinomial", alpha = model_param$alpha, nlambda = model_param$nlambda)
+lambda_path <- glmnet_base$lambda
 
 # build overall model
 validate_predictions <- matrix(ncol = 3, nrow = length(ydata))
@@ -58,12 +60,10 @@ validate_multiloss
 
 # generate predictions on test set
 optimal_lambda_final <- min(lambda_path[lambda_path >= mean(optimal_lambda)])
-test_predictions <- as.data.frame(matrix(predict(glm_base, xdata2,  s = optimal_lambda_final, type = "response"), ncol = 3, byrow = FALSE))
+test_predictions <- as.data.frame(matrix(predict(glmnet_base, xdata2,  s = optimal_lambda_final, type = "response"), ncol = 3, byrow = FALSE))
 names(test_predictions) <- c("low", "medium", "high")
 test_predictions$listing_id <- xdata2_id
 
 # save
-model_name <- sprintf("%s_glmnet", args$univ)
-assign(model_name, list(model = glm_base, validate_multiloss = validate_multiloss, validate_predictions = validate_predictions, test_predictions = test_predictions))
-save(list = c(model_name), file = sprintf("./data/models/%s.Rdata", model_name))
-write.csv(test_predictions, sprintf("./data/test_predictions/%s.csv", model_name), row.names = FALSE)
+model_type <- "glmnet"
+source("./snippets/model_export.R")

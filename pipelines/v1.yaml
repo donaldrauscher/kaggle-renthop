@@ -1,0 +1,16 @@
+
+step1:
+  model: xgb
+  univ: base
+  univ_param: 
+    include_kw_var: 0
+    high_card_loo: 0
+  
+step2:
+  dependencies: [step1]
+  model: glmnet
+  univ: base
+  univ_param: 
+    include_kw_var: 0
+    add_noise: 0
+    high_card_loo: 0
