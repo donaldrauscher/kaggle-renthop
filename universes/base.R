@@ -9,6 +9,7 @@ source("./snippets/util.R")
 load("./data/extract_train.Rdata")
 load("./data/extract_test.Rdata")
 source("./snippets/feature_functions.R")
+source("./snippets/dependencies.R")
 
 # pull in universe params and set defaults if missing
 if(is.null(univ_param$add_noise)) univ_param$add_noise <- 1
@@ -17,6 +18,7 @@ if(is.null(univ_param$high_card_loo)) univ_param$high_card_loo <- 1
 
 # combine datasets
 data_all_processed <- bind_rows(data_train_processed, data_test_processed)
+if(length(dep_outputs)>0) data_all_processed <- cbind(data_all_processed,  bind_rows(dep_validate_predictions, dep_test_predictions))
 is_train <- which(!is.na(data_all_processed$interest_level))
 is_test <- inv_which(is_train, nrow(data_all_processed))
 
