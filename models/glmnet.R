@@ -9,15 +9,19 @@ source("./snippets/util.R")
 parser <- ArgumentParser()
 parser$add_argument("--pipeline", type = "character")
 parser$add_argument("--step", type = "character")
-parser$add_argument("--univ", type = "character")
-parser$add_argument("--univ-param", type = "character", default = "{}")
-parser$add_argument("--model-param", type = "character", default = "{}")
 args <- parser$parse_args()
 
-source(sprintf("./universes/%s.R", args$univ))
+# load step def
+step_def <- get_step_def(args$pipeline, args$step)
+univ_param <- step_def$univ_param
+if(is.null(univ_param)) univ_param <- list()
+model_param <- step_def$model_param
+if(is.null(model_param)) model_param <- list()
 
-# model parameters
-model_param <- fromJSON(args$model_param)
+# build universe
+source(sprintf("./universes/%s.R", step_def$univ))
+
+# fill in model parameter defaults
 if(is.null(model_param$alpha)) model_param$alpha <- 1
 if(is.null(model_param$nlambda)) model_param$nlambda <- 100
 

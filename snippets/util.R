@@ -10,9 +10,14 @@ multiloss <- function(predicted, actual){
 # inverse of a set of indices
 inv_which <- function(indices, tot) setdiff(seq_len(tot), indices)
 
-# returns the name of the output file from a step
-get_step_output <- function(pipeline, step){
+# returns step def from pipeline yaml
+get_step_def <- function(pipeline, step){
   pipeline_def <- yaml.load_file(sprintf('./pipelines/%s.yaml', pipeline))
-  step_def <- pipeline_def[[step]]
+  return(pipeline_def[[step]])
+}
+
+# returns the name of the output file from a step
+get_step_output <- function(pipeline, step, step_def = NULL){
+  if(is.null(step_def)) step_def <- get_step_def(pipeline, step)
   return(paste(pipeline, step, step_def$univ, step_def$model, sep = "_"))
 }

@@ -10,15 +10,19 @@ source("./snippets/util.R")
 parser <- ArgumentParser()
 parser$add_argument("--pipeline", type = "character")
 parser$add_argument("--step", type = "character")
-parser$add_argument("--univ", type = "character")
-parser$add_argument("--univ-param", type = "character", default = "{}")
-parser$add_argument("--model-param", type = "character", default = "{}")
 args <- parser$parse_args()
 
-source(sprintf("./universes/%s.R", args$univ))
+# load step def
+step_def <- get_step_def(args$pipeline, args$step)
+univ_param <- step_def$univ_param
+if(is.null(univ_param)) univ_param <- list()
+model_param <- step_def$model_param
+if(is.null(model_param)) model_param <- list()
+
+# build universe
+source(sprintf("./universes/%s.R", step_def$univ))
 
 # model parameters
-model_param <- fromJSON(args$model_param)
 if(is.null(model_param$eta)) model_param$eta <- 0.02
 if(is.null(model_param$min_child_weight)) model_param$min_child_weight <- 3
 if(is.null(model_param$max_depth)) model_param$max_depth <- 6

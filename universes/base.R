@@ -11,7 +11,6 @@ load("./data/extract_test.Rdata")
 source("./snippets/feature_functions.R")
 
 # pull in universe params and set defaults if missing
-univ_param <- fromJSON(args$univ_param)
 if(is.null(univ_param$add_noise)) univ_param$add_noise <- 1
 if(is.null(univ_param$include_kw_var)) univ_param$include_kw_var <- 1
 if(is.null(univ_param$high_card_loo)) univ_param$high_card_loo <- 1
