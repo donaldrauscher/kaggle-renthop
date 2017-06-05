@@ -69,5 +69,4 @@ names(test_predictions) <- c("low", "medium", "high")
 test_predictions$listing_id <- xdata2_id
 
 # save
-model_type <- "xgb"
 source("./snippets/model_export.R")
