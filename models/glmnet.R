@@ -3,7 +3,7 @@ library(dplyr)
 library(argparse)
 
 set.seed(1)
-source("util.R")
+source("./snippets/util.R")
 
 # load universe
 parser <- ArgumentParser()
@@ -65,5 +65,5 @@ test_predictions$listing_id <- xdata2_id
 # save
 model_name <- sprintf("%s_glmnet", args$univ)
 assign(model_name, list(model = glm_base, validate_multiloss = validate_multiloss, validate_predictions = validate_predictions, test_predictions = test_predictions))
-save(list = c(model_name), file = sprintf("./models/%s.Rdata", model_name))
-write.csv(test_predictions, sprintf("./models/test_predictions/%s.csv", model_name), row.names = FALSE)
+save(list = c(model_name), file = sprintf("./data/models/%s.Rdata", model_name))
+write.csv(test_predictions, sprintf("./data/test_predictions/%s.csv", model_name), row.names = FALSE)

@@ -3,12 +3,12 @@ library(rjson)
 library(Matrix)
 
 set.seed(1)
-source("./util.R")
+source("./snippets/util.R")
 
 # load data
 load("./data/extract_train.Rdata")
 load("./data/extract_test.Rdata")
-source("./setup/feature_functions.R")
+source("./snippets/feature_functions.R")
 
 # pull in universe params and set defaults if missing
 univ_param <- fromJSON(args$univ_param)
