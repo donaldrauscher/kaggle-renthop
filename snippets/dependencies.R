@@ -6,17 +6,16 @@ dep_outputs <- sapply(dep, function(d) get_step_output(args$pipeline, d))
 # load dependencies
 for (d in dep_outputs){
   load(sprintf("./data/models/%s.Rdata", d))
-  dep_output <- get(d)
   
   # clean up validate predictions
-  dep_output$validate_predictions <- as.data.frame(dep_output$validate_predictions[,2:3])
-  names(dep_output$validate_predictions) <- paste(d, c("medium", "high"), sep = "_")
+  step_outputs$validate_predictions <- as.data.frame(step_outputs$validate_predictions)
+  names(step_outputs$validate_predictions) <- paste(d, c("low", "medium", "high"), sep = "_")
 
   # clean up test predictions
-  dep_output$test_predictions <- dep_output$test_predictions[,2:3]
-  names(dep_output$test_predictions) <- paste(d, names(dep_output$test_predictions), sep = "_")
+  step_outputs$test_predictions <- step_outputs$test_predictions %>% select(-listing_id)
+  names(step_outputs$test_predictions) <- paste(d, c("low", "medium", "high"), sep = "_")
 
-  assign(d, dep_output)
+  assign(d, step_outputs)
 }
 
 # concatenate together
