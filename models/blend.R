@@ -1,37 +1,42 @@
-library(xgboost)
-library(glmnet)
+library(dplyr)
 
-set.seed(1)
+# model header
+source("./snippets/model_header.R")
 
-# load data
-load("./data/extract_train.Rdata")
-load("./models/glmnet.Rdata")
-glm_validate_predictions <- validate_predictions
-glm_test_predictions <- test_predictions
-load("./models/xgb.Rdata")
-xgb_validate_predictions <- validate_predictions
-xgb_test_predictions <- test_predictions
-source("extra.R")
+# determine optimal weights across models
+pred_list1 <- lapply(dep_outputs, function(x) get(x)$validate_predictions)
+pred_list2 <- lapply(dep_outputs, function(x) get(x)$test_predictions)
 
-# blend the two models
-ydata <- as.numeric(data_train_processed$interest_level)-1
+blend <- function(par, pred_list){
+  return(Reduce('+', lapply(seq_along(pred_list), function(x) pred_list[[x]] * par[x])))
+}
 
-# determine optimal blend weight
-blend_weights <- seq(0, 1, 0.1)
-blend_mlogloss <- sapply(blend_weights, function(x){
-  blend_validate_predictions <- xgb_validate_predictions * x + glm_validate_predictions * (1 - x)
-  return(multiloss(blend_validate_predictions, ydata))
-})
-validate_multiloss <- min(blend_mlogloss)
-optimal_blend_weight <- blend_weights[which.min(blend_mlogloss)]
-validate_multiloss
-optimal_blend_weight
+multiloss_blend <- function(par, pred_list, actuals){
+  par2 <- c(par, 1 - sum(par))
+  return(multiloss(blend(par2, pred_list), actuals))
+}
 
-# created blended predictions for test set
-validate_predictions <- xgb_validate_predictions * optimal_blend_weight + glm_validate_predictions * (1 - optimal_blend_weight)
-test_predictions <- xgb_test_predictions * optimal_blend_weight + glm_test_predictions * (1 - optimal_blend_weight)
+blender <- function(pred_list, actuals){
+  n_model <- length(pred_list)
+  return(optim(
+    par = rep(1 / n_model, n_model - 1), 
+    fn=multiloss_blend, method="L-BFGS-B", 
+    lower = rep(0, n_model - 1), upper = rep(1, n_model - 1),
+    pred_list = pred_list, actuals = actuals
+  ))
+}
+
+optimal_blend_summary <- blender(pred_list1, ydata)
+optimal_blend_weights <- c(optimal_blend_summary$par, 1 - sum(optimal_blend_summary$par))
+validate_predictions <- blend(optimal_blend_weights, pred_list1)
+validate_multiloss <- optimal_blend_summary$value
+
+# generate predictions on test set
+test_predictions <- as.data.frame(blend(optimal_blend_weights, pred_list2))
+names(test_predictions) <- c("low", "medium", "high")
+test_predictions$listing_id <- xdata2_id
 
 # save
-save(optimal_blend_weight, validate_multiloss, validate_predictions, test_predictions, file = "./models/blend.Rdata")
-write.csv(test_predictions, "./data/predictions_blend.csv", row.names = FALSE)
+blend_base <- optimal_blend_weights
+source("./snippets/model_export.R")
 
