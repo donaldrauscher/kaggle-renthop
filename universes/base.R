@@ -9,7 +9,6 @@ source("./snippets/util.R")
 load("./data/extract_train.Rdata")
 load("./data/extract_test.Rdata")
 source("./snippets/feature_functions.R")
-source("./snippets/dependencies.R")
 
 # pull in universe params and set defaults if missing
 if(is.null(univ_param$add_noise)) univ_param$add_noise <- 1
@@ -69,7 +68,9 @@ cv_data <- lapply(1:5, function(i){
   xdata_i <- data_all_processed
   xdata_i$interest_level[is_test2] <- NA
   xdata_i <- add_high_card_cat(xdata_i)
-  xdata_i <- add_noise(xdata_i, is_train2, high_card_cat)
+  if (univ_param$add_noise){
+    xdata_i <- add_noise(xdata_i, is_train2, high_card_cat)
+  }
   xdata_i <- make_binary(xdata_i, kw_var, 0)
 
   xdata_i_train <- Matrix(as.matrix(xdata_i[is_train2,xvar]), sparse = TRUE)
