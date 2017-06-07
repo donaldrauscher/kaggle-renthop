@@ -1,16 +1,21 @@
 
-step1:
+step1a:
   model: xgb
   univ: base
   univ_param: 
     include_kw_var: 0
+    add_noise: 1
     high_card_loo: 1
-  
-step2:
-  dependencies: [step1]
+
+step1b:
   model: glmnet
   univ: base
   univ_param: 
     include_kw_var: 0
     add_noise: 0
-    high_card_loo: 0
+    high_card_loo: 1
+
+step2:
+  model: blend
+  dependencies: [step1a, step1b]
+  univ: base
