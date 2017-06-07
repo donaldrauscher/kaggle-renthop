@@ -1,4 +1,6 @@
 library(yaml)
+library(digest)
+library(rjson)
 
 # function for multinomial log loss
 multiloss <- function(predicted, actual){
@@ -20,4 +22,20 @@ get_step_def <- function(pipeline, step){
 get_step_output <- function(pipeline, step, step_def = NULL){
   if(is.null(step_def)) step_def <- get_step_def(pipeline, step)
   return(paste(pipeline, step, step_def$univ, step_def$model, sep = "_"))
+}
+
+get_step_output_hashed <- function(pipeline, step, step_def = NULL){
+  if(is.null(step_def)) step_def <- get_step_def(pipeline, step)
+  return(paste(step_def$univ, step_def$model, digest(toJSON(step_def)), sep = "_"))
+}
+
+# check if a step has been run already
+check_step <- function(pipeline, step){
+  step_output <- paste0(get_step_output(pipeline, step), ".Rdata")
+  step_output_hashed <- paste0(get_step_output_hashed(pipeline, step), ".Rdata")
+  if (step_output %in% list.files("./data/models")) stop("Step has already been run!")
+  if (step_output_hashed %in% list.files("./data/models/hashed")){
+    system(sprintf("ln -sr ./data/models/hashed/%s ./data/models/%s", step_output_hashed, step_output))
+    stop("Step has already been run but needed to set symlink!")
+  }
 }
