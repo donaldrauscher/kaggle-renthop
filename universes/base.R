@@ -1,4 +1,5 @@
 library(dplyr)
+library(lubridate)
 library(rjson)
 library(Matrix)
 
@@ -21,15 +22,97 @@ if(length(dep_outputs)>0) data_all_processed <- cbind(data_all_processed,  bind_
 is_train <- which(!is.na(data_all_processed$interest_level))
 is_test <- inv_which(is_train, nrow(data_all_processed))
 
+# some base variables
+# price per square foot from https://www.kaggle.com/arnaldcat/a-proxy-for-sqft-and-the-interest-on-1-2-baths
+data_all_processed <- data_all_processed %>% 
+  mutate(
+    logprice = log(price),
+    price_per_sqft = price / (1 + ifelse(bedrooms <= 1, 1, ifelse(bedrooms >= 4, 4, bedrooms)) + 0.5 * ifelse(bathrooms <= 0, 0, ifelse(bathrooms >= 2, 2, bathrooms))),
+    has_half_bath = as.integer(round(bathrooms) != bathrooms),
+    bedrooms_minus_bathrooms = bedrooms - bathrooms, 
+    price_per_bedroom = price / ifelse(bedrooms == 0, 1, bedrooms),
+    total_rooms = bedrooms + bathrooms,
+    price_per_room = price / ifelse(total_rooms == 0, 1, total_rooms)
+  )
+
+# days of week / hour of day variables
+weekdays <- weekdays(data_all_processed$created)
+data_all_processed$is_monday <- as.integer(weekdays == "Monday")
+data_all_processed$is_tuesday <- as.integer(weekdays == "Tuesday")
+data_all_processed$is_wednesday <- as.integer(weekdays == "Wednesday")
+data_all_processed$is_thursday <- as.integer(weekdays == "Thursday")
+data_all_processed$is_friday <- as.integer(weekdays == "Friday")
+data_all_processed$is_saturday <- as.integer(weekdays == "Saturday")
+data_all_processed$is_sunday <- as.integer(weekdays == "Sunday")
+
+hours <- hour(data_all_processed$created)
+hours2 <- ifelse(hours <= 5, "Early Morning", ifelse(hours <= 11, "Late Morning", ifelse(hours <= 16, "Afternoon", "Evening")))
+data_all_processed$hour <- hours
+data_all_processed$is_early_morning <- as.integer(hours2 == "Early Morning")
+data_all_processed$is_late_morning <- as.integer(hours2 == "Late Morning")
+data_all_processed$is_afternoon <- as.integer(hours2 == "Afternoon")
+data_all_processed$is_evening <- as.integer(hours2 == "Evening")
+
+# building / manager / neighborhood sizes
+data_all_processed <- data_all_processed %>% 
+  group_by(building_id) %>% mutate(building_n = n()) %>% ungroup() %>%
+  group_by(neighborhood_id) %>% mutate(neighborhood_n = n()) %>% ungroup() %>%
+  group_by(manager_id) %>% mutate(manager_n = n()) %>% ungroup()
+
+# building / manager / neighborhood averages
+data_all_processed <- data_all_processed %>% 
+  group_by(building_id) %>% 
+  mutate(
+    building_mean_price = mean(price),
+    building_mean_bedroom = mean(bedrooms),
+    building_mean_price_per_sqft = mean(price_per_sqft),
+    building_mean_price_per_bedroom = mean(price_per_bedroom),
+    building_mean_price_per_room = mean(price_per_room),
+    building_mean_price_rel = ifelse(building_mean_price == 0, 1, price / building_mean_price),
+    building_mean_bedroom_rel = ifelse(building_mean_bedroom == 0, 1, bedrooms / building_mean_bedroom),
+    building_mean_price_per_sqft_rel = ifelse(building_mean_price_per_sqft == 0, 1, price_per_sqft / building_mean_price_per_sqft),
+    building_mean_price_per_bedroom_rel = ifelse(building_mean_price_per_bedroom == 0, 1, price_per_bedroom / building_mean_price_per_bedroom),
+    building_mean_price_per_room_rel = ifelse(building_mean_price_per_room == 0, 1, price_per_room / building_mean_price_per_room)
+  ) %>% ungroup() %>%
+  group_by(neighborhood_id) %>%
+  mutate(
+    neighborhood_mean_price = mean(price),
+    neighborhood_mean_bedroom = mean(bedrooms),
+    neighborhood_mean_price_per_sqft = mean(price_per_sqft),
+    neighborhood_mean_price_per_bedroom = mean(price_per_bedroom),
+    neighborhood_mean_price_per_room = mean(price_per_room),
+    neighborhood_mean_price_rel = ifelse(neighborhood_mean_price == 0, 1, price / neighborhood_mean_price),
+    neighborhood_mean_bedroom_rel = ifelse(neighborhood_mean_bedroom == 0, 1, bedrooms / neighborhood_mean_bedroom),
+    neighborhood_mean_price_per_sqft_rel = ifelse(neighborhood_mean_price_per_sqft == 0, 1, price_per_sqft / neighborhood_mean_price_per_sqft),
+    neighborhood_mean_price_per_bedroom_rel = ifelse(neighborhood_mean_price_per_bedroom == 0, 1, price_per_bedroom / neighborhood_mean_price_per_bedroom),
+    neighborhood_mean_price_per_room_rel = ifelse(neighborhood_mean_price_per_room == 0, 1, price_per_room / neighborhood_mean_price_per_room)
+  ) %>% ungroup() %>%
+  group_by(manager_id) %>%
+  mutate(
+    manager_mean_price = mean(price),
+    manager_mean_bedroom = mean(bedrooms),
+    manager_mean_price_per_sqft = mean(price_per_sqft),
+    manager_mean_price_per_bedroom = mean(price_per_bedroom),
+    manager_mean_price_per_room = mean(price_per_room),
+    manager_mean_price_rel = ifelse(manager_mean_price == 0, 1, price / manager_mean_price),
+    manager_mean_bedroom_rel = ifelse(manager_mean_bedroom == 0, 1, bedrooms / manager_mean_bedroom),
+    manager_mean_price_per_sqft_rel = ifelse(manager_mean_price_per_sqft == 0, 1, price_per_sqft / manager_mean_price_per_sqft),
+    manager_mean_price_per_bedroom_rel = ifelse(manager_mean_price_per_bedroom == 0, 1, price_per_bedroom / manager_mean_price_per_bedroom),
+    manager_mean_price_per_room_rel = ifelse(manager_mean_price_per_room == 0, 1, price_per_room / manager_mean_price_per_room)
+  ) %>% ungroup()
+
 # add high-cardinality categorical
-high_card_seg <- c(0, 10, 20, 30, Inf)
 add_high_card_cat <- function(df){
-  df$building_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), building_id, high_card_seg, univ_param$high_card_loo)
-  df$building_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), building_id, high_card_seg, univ_param$high_card_loo)
-  df$manager_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), manager_id, high_card_seg, univ_param$high_card_loo)
-  df$manager_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), manager_id, high_card_seg, univ_param$high_card_loo)
-  df$neighborhood_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), neighborhood_id, high_card_seg, univ_param$high_card_loo)
-  df$neighborhood_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), neighborhood_id, high_card_seg, univ_param$high_card_loo)
+  df <- df %>% group_by(building_id) %>% mutate(seg = cut(n(), breaks = c(0, 10, 30, Inf))) %>% ungroup()
+  df$building_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), building_id, seg, univ_param$high_card_loo)
+  df$building_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), building_id, seg, univ_param$high_card_loo)
+  df <- df %>% group_by(manager_id) %>% mutate(seg = cut(n(), breaks = c(0, 10, 30, Inf))) %>% ungroup()
+  df$manager_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), manager_id, seg, univ_param$high_card_loo)
+  df$manager_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), manager_id, seg, univ_param$high_card_loo)
+  df <- df %>% group_by(neighborhood_id) %>% mutate(seg = cut(n(), breaks = c(0, 10, 30, Inf))) %>% ungroup()
+  df$neighborhood_interest_h <- probabilize_high_card_cat(df, ifelse(interest_level == "high", 1, 0), neighborhood_id, seg, univ_param$high_card_loo)
+  df$neighborhood_interest_m <- probabilize_high_card_cat(df, ifelse(interest_level == "medium", 1, 0), neighborhood_id, seg, univ_param$high_card_loo)
+  df <- df %>% select(-seg)
   return(df)
 }
 

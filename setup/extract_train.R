@@ -2,7 +2,6 @@ library(jsonlite)
 library(dplyr)
 library(tidyr)
 library(tidytext)
-library(lubridate)
 library(ggplot2)
 library(maptools)
 library(tm)
@@ -32,44 +31,13 @@ data2 <- data.frame(
   stringsAsFactors=FALSE
 )
 
-# create a few base variables
+# overall weights
 data3 <- data2
 data3$interest_level <- factor(data3$interest_level, levels = c("low", "medium", "high"), ordered = TRUE)
-data3$price[data3$price > 30000] <- 30000
-data3 <- data3 %>% 
-  mutate(
-    logprice = log(price),
-    bedrooms_minus_bathrooms = bedrooms - bathrooms, 
-    price_per_bedroom = price / ifelse(bedrooms == 0, 1, bedrooms),
-    total_rooms = bedrooms + bathrooms,
-    price_per_room = price / ifelse(total_rooms == 0, 1, total_rooms)
-  )
-
-# days of week / hour of day variables
-weekdays <- weekdays(data3$created)
-data$is_monday <- as.integer(weekdays == "Monday")
-data$is_tuesday <- as.integer(weekdays == "Tuesday")
-data$is_wednesday <- as.integer(weekdays == "Wednesday")
-data$is_thursday <- as.integer(weekdays == "Thursday")
-data$is_friday <- as.integer(weekdays == "Friday")
-data$is_saturday <- as.integer(weekdays == "Saturday")
-data$is_sunday <- as.integer(weekdays == "Sunday")
-
-hours <- hour(data3$created)
-hours2 <- ifelse(hours <= 5, "Early Morning", ifelse(hours <= 11, "Late Morning", ifelse(hours <= 16, "Afternoon", "Evening")))
-data$is_early_morning <- as.integer(hours2 == "Early Morning")
-data$is_late_morning <- as.integer(hours2 == "Late Morning")
-data$is_afternoon <- as.integer(hours2 == "Afternoon")
-data$is_evening <- as.integer(hours2 == "Evening")
-
-# overall weights
 n_low_total <- sum(data3$interest_level == "low")
 n_med_total <- sum(data3$interest_level == "medium")
 n_high_total <- sum(data3$interest_level == "high")
 n_total <- n_low_total + n_med_total + n_high_total
-perc_low <- n_low_total / n_total
-perc_med <- n_med_total / n_total
-perc_high <- n_high_total / n_total
 
 # dimensions for features
 top_features <- as.data.frame(table(unlist(data$features))) %>% 
@@ -235,11 +203,6 @@ ngrams3$listing_id <- ngrams2$listing_id
 data3 <- data3 %>% left_join(ngrams3, by = c("listing_id"))
 data3[,ngram_field_names][is.na(data3[,ngram_field_names])] <- 0
 
-# add average price per room for each neighborhood / building
-data3 <- data3 %>% 
-  group_by(neighborhood_id, bedrooms) %>% mutate(price_vs_neighborhood = price / median(price))  %>% ungroup() %>%
-  group_by(building_id, bedrooms) %>% mutate(price_vs_building = price / median(price)) %>% ungroup()
-
 # qc that we made all our features correctly
 apply(data3[,grep("[f,n,b,m,k][0-9]{3}", names(data3), value=TRUE)], 2, sum)
 model_exclude_var <- c("description", "created", "listing_id", "building_id", "manager_id", "neighborhood_id", "neighborhood", "latitude", "longitude", "display_address", "street_address")
@@ -247,8 +210,7 @@ model_exclude_var <- c("description", "created", "listing_id", "building_id", "m
 # save
 data_train_raw <- data2
 data_train_processed <- data3
-save(data_train_raw, data_train_processed, model_exclude_var, 
-  perc_low, perc_med, perc_high, 
+save(data_train_raw, data_train_processed, model_exclude_var,
   top_features, top_neighborhoods, top_buildings, top_managers, top_ngrams, ngram_principal_factors, 
   file = "./data/extract_train.Rdata")
 
