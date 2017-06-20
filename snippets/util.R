@@ -26,7 +26,16 @@ get_step_output <- function(pipeline, step, step_def = NULL){
 
 get_step_output_hashed <- function(pipeline, step, step_def = NULL){
   if(is.null(step_def)) step_def <- get_step_def(pipeline, step)
-  return(paste(step_def$univ, step_def$model, digest(toJSON(step_def)), sep = "_"))
+  return(paste(step_def$univ, step_def$model, digest(toJSON(get_all_dep(pipeline, step))), sep = "_"))
+}
+
+# pulls all parameters recursively
+get_all_dep <- function(pipeline, step){
+  step_def <- get_step_def(pipeline, step)
+  if(!is.null(step_def$dependencies)){
+    step_def$dependencies <- setNames(sapply(step_def$dependencies, function(x) get_all_dep(pipeline, x)), step_def$dependencies)
+  }
+  return(step_def)
 }
 
 # check if a step has been run already
