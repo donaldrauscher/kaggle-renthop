@@ -1,51 +1,50 @@
 library(dplyr)
 library(lazyeval)
 
+# clip
+clip <- function(x, a, b) {
+  ifelse(x <= a,  a, ifelse(x >= b, b, x))
+}
+
 # fit beta distribution with mle
 dbetabinom <- function(k, n, a, b) { 
-  choose(n,k) * beta(k + a, n - k + b) / beta(a, b)
+  ifelse(n <= 100, choose(n,k) * beta(k + a, n - k + b) / beta(a, b), dbeta(clip(k / n, 0.01, 0.99), a, b))
 } 
 
-dbetabinom_ll <- function(k, n, par) { 
+betabinom_ll <- function(k, n, par) { 
   sum(-log(dbetabinom(k, n, par[1], par[2]))) 
 } 
 
-beta_ll <- function(par, x) { 
-  x2 <- x
-  x2[x2 == 0] <- 0.01
-  x2[x2 == 1] <- 0.99
-  return(sum(-dbeta(x2, par[1], par[2], log=TRUE))) 
-} 
-
-beta_mle <- function(ll_fn, ...){
-  return(optim(par = c(1,1), fn=ll_fn, method="L-BFGS-B", lower=c(0.5,0.5), upper=c(500,500), ...)$par)
+beta_mle <- function(...){
+  par <- optim(par = c(1,1), fn=betabinom_ll, method="L-BFGS-B", lower=c(0.5,0.5), upper=c(500,500), ...)$par
+  return(data.frame(a = par[1], b = par[2]))
 }
 
 # function for probabilizing high cardinality categorical variable
-probabilize_high_card_cat <- function(df, y, x, seg, loo){
-  df$y <- f_eval(f_capture(y), df); df$x <- f_eval(f_capture(x), df)
-  df <- df %>% group_by(x) %>% mutate(n_bkt = cut(n(), breaks = seg), a = NA, b = NA) %>% ungroup()
+probabilize_high_card_cat <- function(df, y, x, seg = 1, loo = 1){
+  
+  # set x, y, and seg
+  df$y <- f_eval(f_capture(y), df)
+  df$x <- f_eval(f_capture(x), df)
+  df$seg <- f_eval(f_capture(seg), df) 
+
+  # determine prior for each segment
   dist <- df %>% 
     filter(!is.na(y)) %>% # df includes both test and train
-    group_by(x, n_bkt, a, b) %>% summarise(k = sum(y), n = n()) %>% ungroup()
-  lvls <- levels(dist$n_bkt)
-  max_lvl <- tail(lvls, 1)
-  for (l in lvls){
-    is_lvl <- dist$n_bkt == l
-    if (l == max_lvl){
-      par <- beta_mle(ll_fn = beta_ll, x = (dist$k/dist$n)[dist$n_bkt == l])
-    } else {
-      par <- beta_mle(ll_fn = dbetabinom_ll, k = dist$k[dist$n_bkt == l], n = dist$n[dist$n_bkt == l])
-    }
-    df$a[df$n_bkt == l] <- par[1]; df$b[df$n_bkt == l] <- par[2]
-  }
+    group_by(seg, x) %>% summarise(k = sum(y), n = n()) %>% ungroup() %>%
+    group_by(seg) %>% do(beta_mle(k = .$k, n = .$n)) %>% ungroup()
+  
+  # calculate posterior probabilities
   df <- df %>% 
+    left_join(dist, by = c("seg")) %>%
     group_by(x) %>% mutate(
       k = sum(y, na.rm = TRUE) - loo * ifelse(!is.na(y), y, 0), 
       n = sum(!is.na(y), na.rm = TRUE) - loo * as.integer(!is.na(y))
     ) %>% ungroup() %>%
     mutate(y2 = (a + k) / (a + b + n))
+  
   return(df$y2)
+
 }
 
 # add some noise
