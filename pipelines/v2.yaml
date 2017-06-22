@@ -1,0 +1,16 @@
+
+step1:
+  model: xgb2
+  univ: price
+  
+
+step2:
+  model: xgb
+  dependencies: [step1]
+  dependency_normalizer: price
+  univ: base
+  univ_param: 
+    include_kw_var: 0
+    include_hcc: 1
+    add_hcc_noise: 1
+    hcc_loo: 1
