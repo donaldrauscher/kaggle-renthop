@@ -28,8 +28,10 @@ blender <- function(pred_list, actuals){
 
 optimal_blend_summary <- blender(pred_list1, ydata)
 optimal_blend_weights <- c(optimal_blend_summary$par, 1 - sum(optimal_blend_summary$par))
+optimal_blend_weights <- optimal_blend_weights - min(optimal_blend_weights) # make sure no negative weights
+optimal_blend_weights <- optimal_blend_weights / sum(optimal_blend_weights)
 validate_predictions <- blend(optimal_blend_weights, pred_list1)
-validate_multiloss <- optimal_blend_summary$value
+validate_error <- optimal_blend_summary$value
 
 # generate predictions on test set
 test_predictions <- as.data.frame(blend(optimal_blend_weights, pred_list2))
