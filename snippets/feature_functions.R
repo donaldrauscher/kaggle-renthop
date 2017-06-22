@@ -1,14 +1,11 @@
 library(dplyr)
 library(lazyeval)
 
-# clip
-clip <- function(x, a, b) {
-  ifelse(x <= a,  a, ifelse(x >= b, b, x))
-}
-
 # fit beta distribution with mle
 dbetabinom <- function(k, n, a, b) { 
-  ifelse(n <= 100, choose(n,k) * beta(k + a, n - k + b) / beta(a, b), dbeta(clip(k / n, 0.01, 0.99), a, b))
+  n2 <- ifelse(n > 100, 100, n)
+  k2 <- round(k * n2 / n)
+  beta(k2 + a, n2 - k2 + b) / beta(a, b)
 } 
 
 betabinom_ll <- function(k, n, par) { 
