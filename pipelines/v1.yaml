@@ -4,18 +4,34 @@ step1a:
   univ: base
   univ_param: 
     include_kw_var: 0
-    add_noise: 1
-    high_card_loo: 1
+    include_hcc: 1
+    add_hcc_noise: 1
+    hcc_loo: 1
 
 step1b:
+  model: xgb
+  univ: base
+  univ_param: 
+    include_kw_var: 1
+    include_hcc: 0
+
+step1c:
   model: glmnet
   univ: base
   univ_param: 
     include_kw_var: 0
-    add_noise: 0
-    high_card_loo: 1
+    include_hcc: 1
+    add_hcc_noise: 0
+    hcc_loo: 1
+
+step1d:
+  model: glmnet
+  univ: base
+  univ_param: 
+    include_kw_var: 1
+    include_hcc: 0
 
 step2:
   model: blend
-  dependencies: [step1a, step1b]
+  dependencies: [step1a, step1b, step1c, step1d]
   univ: base
