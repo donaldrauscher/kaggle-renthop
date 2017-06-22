@@ -9,6 +9,11 @@ multiloss <- function(predicted, actual){
   return(-sum(actual_m*log(predicted_m)) / nrow(actual_m))
 }
 
+# function for root mean squared error
+rmse <- function(predicted, actual){
+  sqrt(mean((predicted - actual)^2))
+}
+
 # inverse of a set of indices
 inv_which <- function(indices, tot) setdiff(seq_len(tot), indices)
 
