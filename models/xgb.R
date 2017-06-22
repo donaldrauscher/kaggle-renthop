@@ -49,8 +49,8 @@ for (i in 1:max(cv)){
 }
 
 # calculate multilogloss for validate predictions
-validate_multiloss <- multiloss(validate_predictions, ydata)
-validate_multiloss
+validate_error <- multiloss(validate_predictions, ydata)
+validate_error
 
 # create final model without cross-validation
 xgb_base <- xgboost(data = xdata, label = ydata, params = params, nrounds = round(mean(best_ntreelimit)))

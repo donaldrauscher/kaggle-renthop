@@ -42,8 +42,8 @@ for (i in 1:max(cv)){
 }
 
 # calculate multilogloss
-validate_multiloss <- multiloss(validate_predictions, ydata)
-validate_multiloss
+validate_error <- multiloss(validate_predictions, ydata)
+validate_error
 
 # generate predictions on test set
 optimal_lambda_final <- min(lambda_path[lambda_path >= mean(optimal_lambda)])
